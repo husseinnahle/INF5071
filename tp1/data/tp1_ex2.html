@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>TP1 - Ex2 - Solution</title>
+        <style>
+            body{
+                margin: 0;
+                height: 100%;
+                overflow: hidden;
+            }
+
+        </style>
+        <script>
+
+            let canvas;    // Objet DOM correspondant au canvas
+            let graphics;  // Contexte de graphique 2d pour dessiner sur la canvas
+
+            const background_color = "rgb(1, 2, 40)";
+            const gradiant_color = "rgba(150, 150, 150, 0.35)";
+            const constellation_color = "rgb(150, 150, 150)"
+
+            // Variable pour la position des étoiles
+            let constellations = [];
+
+            /* Propriétés de l'application (Note: vous pouvez changer ces valeurs pour tester votre code) */
+            // Propriétés de la ville
+            const cityLength = 64;
+            const buildingWidth = 0.1;
+            let farBuildingsHeights = [];
+            let middleBuildingsHeights = [];
+            let closeBuildingsHeights = [];
+            let farBuildingsPos = [];
+            let middleBuildingsPos = [];
+            let closeBuildingsPos = [];
+            const close_build_color = "rgb(150, 150, 150)";
+            const middle_building_color = "rgb(100, 100, 100)";
+            const far_building_color = "rgb(75, 75, 75)";
+
+            // Propriétés du vaisseau
+            let vesselPos = {x: 0.3, y: 0.3};
+            const maxSpeed = -25;
+            const minSpeed = -10;
+            let speed = minSpeed; // pixels per millisecond
+            let acceleration = 0.1; // pixels per millisecond per millisecond
+
+
+            function generate_constellations() {
+                // Génération des constellations
+                let dispersion = 0.1;
+                for (let i=0; i < 1/dispersion; i++) {
+                    for (let j=0; j < 1/dispersion; j++) {
+                        let n_stars = Math.floor(1 + Math.random() * 7);
+                        let cx = (i + 0.5) * dispersion + (Math.random()-0.5) * dispersion / 2
+                        let cy = (j + 0.5) * dispersion + (Math.random()-0.5) * dispersion / 2
+
+                        let stars = [];
+                        for (let k=0; k < n_stars; k++) {
+                            let pos = {x: cx + dispersion * (Math.random() - 0.5), y: cy + dispersion * (Math.random() - 0.5)};
+                            stars.push(pos);
+                        }
+                        constellations.push(stars);
+                    }
+                }
+            }
+
+            function generate_city() {
+                let x = 0
+                for (let i = 0; i < cityLength; i++) {
+                    // Générer les hauteurs des immeubles. Ceux qui sont plus loins auront des hauteurs plus grandes
+                    const farHeight = (Math.random() * (0.9 - 0.6) + 0.6) * canvas.height * 0.9;
+                    const middleHeight = (Math.random() * (0.8 - 0.5) + 0.5) * canvas.height * 0.7;
+                    const closeHeight = (Math.random() * (0.7 - 0.3) + 0.3) * canvas.height * 0.6;            
+
+                    farBuildingsHeights.push(farHeight);
+                    middleBuildingsHeights.push(middleHeight);
+                    closeBuildingsHeights.push(closeHeight);
+
+                    if (i > 0) {
+                        x += buildingWidth * canvas.width;
+                    }
+                    
+                    // Définir la position initial des immeubles sur le canvas
+                    farBuildingsPos.push({ x: x, y: canvas.height - farHeight });
+                    middleBuildingsPos.push({ x: x, y: canvas.height - middleHeight });
+                    closeBuildingsPos.push({ x: x, y: canvas.height - closeHeight });
+                }
+            }
+
+            function draw_smog() {
+                // Déssiner le gradiant
+                smog = graphics.createLinearGradient(0, 0, 0, canvas.height);
+                smog.addColorStop(0, gradiant_color);
+                smog.addColorStop(1, "rgba(0, 0, 0, 0)");  // Transparent
+                graphics.fillStyle = smog;
+                graphics.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            function draw_vessel(){
+                // Déssiner le vaisseau
+                posX = vesselPos.x * canvas.width;
+                posY = vesselPos.y * canvas.height;
+
+                graphics.beginPath();
+                graphics.moveTo(posX, posY);
+                graphics.lineTo(posX, posY + 20);
+                graphics.lineTo(posX + 70, posY + 20);
+                graphics.fillStyle = "red";
+                graphics.fill();
+
+                // Déssiner un effet à la plume lorsque le vaisseau atteint la vitesse max
+                if (speed == maxSpeed){
+                    graphics.shadowBlur = 20;
+                    graphics.shadowColor = "rgb(122, 255, 255)";    
+                }
+
+                // Déssiner la plume du vaisseau
+                graphics.beginPath();
+                graphics.moveTo(posX, posY);
+                graphics.lineTo(posX, posY + 20);
+                graphics.lineTo(posX + (speed*2), posY + 10);  // Longueur de la plume
+                graphics.fillStyle = "rgb(122, 255, 255)";
+                graphics.fill();
+
+                // Supprimer l'effet blur pour ne pas affecter les autres objets du canvas
+                graphics.shadowBlur = 0;
+            }
+
+            function draw_background(){
+                // Définir la couleur de l'arrière plan
+                graphics.fillStyle = background_color;
+                graphics.fillRect(0, 0, canvas.width, canvas.height);
+
+                for (let i=0; i < constellations.length; i++) {
+
+                    stars = constellations[i];
+                    for (let j=0; j < stars.length; j++) {
+                        star_x = stars[j]['x'] * canvas.width
+                        star_y = stars[j]['y'] * canvas.width
+
+                        // Déssiner un étoile
+                        graphics.beginPath();
+                        graphics.arc(star_x, star_y, 3, 0, 2*Math.PI);  // Cercle de rayon 3px
+                        graphics.fillStyle = constellation_color;
+                        graphics.fill();
+
+                        if (j > 0) {
+                            // Déssiner le lien entre l'étoile courante et précedente
+                            prev_star_x = stars[j-1]['x'] * canvas.width
+                            prev_star_y = stars[j-1]['y'] * canvas.width
+                            graphics.setLineDash([2, 1]);  // Ligne pointillées
+                            graphics.beginPath();
+                            graphics.moveTo(prev_star_x, prev_star_y);
+                            graphics.lineTo(star_x, star_y);
+                            graphics.lineWidth = 2;
+                            graphics.strokeStyle = constellation_color;
+                            graphics.stroke();
+                        }
+
+                    }
+
+                }
+
+            }
+
+            function draw_city() {
+                // Déssiner la ville
+                draw_buildings(farBuildingsHeights, farBuildingsPos, far_building_color);
+                draw_buildings(middleBuildingsHeights, middleBuildingsPos, middle_building_color);
+                draw_buildings(closeBuildingsHeights, closeBuildingsPos, close_build_color);
+            }
+
+            function draw_buildings(buildingHeights, buildingPos, color) {
+                // Déssiner les immeubles
+                for (let i = 0; i < cityLength; i++) {
+                    graphics.beginPath();
+                    graphics.rect(buildingPos[i].x, buildingPos[i].y, buildingWidth * canvas.width, buildingHeights[i]);
+                    graphics.fillStyle = color;
+                    graphics.fill();
+                }
+            }
+
+            function draw() {
+                // On nettoie le canvas avant de redessiner
+                graphics.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Dessine le background
+                draw_background();
+
+                // On dessine la ville
+                draw_city();
+
+                // On dessine le vaisseau
+                draw_vessel();
+
+                // Draw smog
+                draw_smog();
+            }
+
+            function moveBuildingsRigth(buildings, buildingsToMove) {
+                buildings.splice(0, buildingsToMove.length);
+                buildings.push(...buildingsToMove);
+                return buildings;
+            }
+
+            function updateBuildingsPosition() {
+                // Mettre à jours la position des immeubles en fonction de la position du vaisseau
+                let farBuildingsPosOutsideCanvas = [];
+                let middleBuildingsPosOutsideCanvas = [];
+                let closeBuildingsPosOutsideCanvas = [];
+
+                let farBuildingsHeigthsOutsideCanvas = [];
+                let middleBuildingsHeigthsOutsideCanvas = [];
+                let closeBuildingsHeigthsOutsideCanvas = [];
+
+                for (let i = 0; i < cityLength; i++) {
+                    // La vitesse de mouvement des édifices est moins élevé pour ceux qui sont plus loins
+                    farBuildingsPos[i].x += speed * 0.3;
+                    middleBuildingsPos[i].x += speed * 0.6;
+                    closeBuildingsPos[i].x += speed * 0.9;
+
+                    /*
+                      Les édifices se déplaces dans le canvas en fonction de la vitesse du vaisseau.
+                      Lors du déplacement d'un édifice à l'extérieur du canvas, si la vitesse du véssau
+                      est supérieur à la largeur de l'édifice, un espace va s'ajouter entre l'édifice
+                      à déplacer et le dernier édifice à droite. Cet espace supplémentaire représente la différence
+                      entre la vitesse du vésseau et la position de l'édifice avant son déplacement.
+
+                      Pour éviter les espaces supplémentaires (causée par l'augmentation de vitesse)
+                      lors du déplacement d'un édifice à droite, il faut calculer la différence entre sa position
+                      actuelle et sa largeur. Cette différence doit être prise en compte lors du calcule de la
+                      nouvelle position.
+                    */
+
+                    if (farBuildingsPos[i].x < - buildingWidth * canvas.width) {
+                        diff = buildingWidth * canvas.width - farBuildingsPos[i].x;  // Calcule de la différence
+                        farBuildingsPos[i].x = (cityLength * buildingWidth * canvas.width) - diff;  // Calcule de la nouvelle position
+                        farBuildingsPosOutsideCanvas.push(farBuildingsPos[i]);
+                        farBuildingsHeigthsOutsideCanvas.push(farBuildingsHeights[i]);
+                    }
+
+                    if (middleBuildingsPos[i].x < - buildingWidth * canvas.width) {
+                        diff = buildingWidth * canvas.width - middleBuildingsPos[i].x
+                        middleBuildingsPos[i].x = (cityLength * buildingWidth * canvas.width) - diff;
+                        middleBuildingsPosOutsideCanvas.push(middleBuildingsPos[i]);
+                        middleBuildingsHeigthsOutsideCanvas.push(middleBuildingsHeights[i]);
+                    }
+
+                    if (closeBuildingsPos[i].x < - buildingWidth * canvas.width) {
+                        diff = buildingWidth * canvas.width - closeBuildingsPos[i].x
+                        closeBuildingsPos[i].x = (cityLength * buildingWidth * canvas.width) - diff;
+                        closeBuildingsPosOutsideCanvas.push(closeBuildingsPos[i]);
+                        closeBuildingsHeigthsOutsideCanvas.push(closeBuildingsHeights[i]);
+                    }
+                }
+
+                // Déplacer à droite les édifices non visibles sur le canvas
+
+                // Déplacer les positions
+                moveBuildingsRigth(farBuildingsPos, farBuildingsPosOutsideCanvas);
+                moveBuildingsRigth(middleBuildingsPos, middleBuildingsPosOutsideCanvas);
+                moveBuildingsRigth(closeBuildingsPos, closeBuildingsPosOutsideCanvas);
+
+                // Déplacer les hauteurs. On peut ignorer les hauteurs pour far et middle car leurs bas n'est jamais
+                // visible (caché par les édifices plus proches).
+                moveBuildingsRigth(closeBuildingsHeights, closeBuildingsHeigthsOutsideCanvas);
+            }
+
+            function updateVesselPosition(e){
+                // Mettre à la position et la vitesse du vaisseau
+
+                // Mouvement à droite avec la touche D ou -->
+                if (e.keyCode == 39 || e.keyCode == 68) {
+                    if (vesselPos.x < 0.8) {
+                        vesselPos.x += 0.01;
+                    }
+                }
+
+                // Mouvement à gauche avec la touche A ou <--
+                if (e.keyCode == 37 || e.keyCode == 65) {
+                    if (vesselPos.x > 0.2) {
+                        vesselPos.x -= 0.01;
+                    }
+                }
+
+                // Mouvement vers le bas avec la touche S ou flèche bas
+                if (e.keyCode == 38 || e.keyCode == 87) {
+                    if (vesselPos.y > 0.2) {
+                        vesselPos.y -= 0.01;
+                    }
+                }
+
+                // Mouvement vers le haut avec la touche W ou flèche haut
+                if (e.keyCode == 40 || e.keyCode == 83) {
+                    if (vesselPos.y < 0.8) {
+                        vesselPos.y += 0.01;
+                    }
+                }
+
+                // Accélération avec la touche Espace
+                if (e.keyCode == 32) {
+                    speed = (speed > maxSpeed) ? (speed - acceleration) : maxSpeed;
+                }
+            }
+
+            function releaseSpace(e){
+                // On revient à la vitesse min lorsque la touche Espace est libérée
+                if (e.keyCode == 32) {
+                    speed = minSpeed;
+                }
+            }
+
+            function init() {
+                // Initialisation du dessin. Il s'affiche sur toute la fenêtre
+                canvas = document.getElementById("theCanvas");
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                window.addEventListener("keydown", updateVesselPosition, true);
+                window.addEventListener("keyup", releaseSpace, true);
+                graphics = canvas.getContext("2d");
+
+                // Initialisation
+                generate_constellations();
+                generate_city();
+
+                requestAnimationFrame(update);
+            }
+
+            function update(){
+                // Mise à jour de la position des édifices
+                updateBuildingsPosition();
+
+                // On dessine !
+                draw()
+
+                // Request new animation frame
+                requestAnimationFrame(update);
+            }
+
+        </script>
+    </head>
+    <body onload="init()">
+        <canvas id="theCanvas"></canvas>
+    </body>
+</html>
+
+<!-- Code testé dans chrome et edge -->

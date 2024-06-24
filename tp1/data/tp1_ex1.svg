@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" 
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        width="512" height="512" 
+        viewBox="0 0 1 1"
+        preserveAspectRatio="xMidYMid">
+
+  <!-- Éléments réutilisables -->
+  <pattern id="background" patternUnits="userSpaceOnUse" width="100%" height="100%">
+    <image href="tp1_ex1_ciel.jpg" x="0" y="0" width="100%" height="100%" />
+  </pattern>
+
+  <pattern id="visage" patternUnits="userSpaceOnUse" width="100%" height="100%">
+    <image href="tp1_ex1_prepa.png" x="-0.225" y="0.6" width="145%" height="145%">
+      <animate attributeName="y" values="0.6;0.45;0.45;0.6;0.6" dur="20s" repeatCount="indefinite"/>
+    </image>
+  </pattern>
+
+  <!-- Arrière-plan sous forme d'image -->
+  <rect width="100%" height="100%" fill="url(#background)" />
+
+  <!-- Corps -->
+  <rect x="0" y="0" width="100%" height="100%" fill="url(#visage)"></rect>
+
+  <!-- Visage (Yeux et Sourire) -->
+  <g fill="none" stroke="white" stroke-linecap="round" stroke-width="0.01">
+    <path d="M0.4,0.6 A0.125,0.3 0 0,0 0.47,0.6"/>
+    <path d="M0.53,0.6 A0.125,0.3 0 0,0 0.6,0.6"/>
+    <path d="M0.4,0.7 A0.2,0.3 0 0,0 0.6,0.7"/>
+    <animateTransform
+        attributeName="transform"
+        type="translate"
+        values="0,0.1;0,0.05;0,0.05;0,0.1;0,0.1"
+        dur="20s"
+        repeatCount="indefinite"
+      /> 
+  </g>
+
+  <!-- Text Inspirez
+  
+       Pour animer l'opacité j'ai créé une séquence d'animation avec des timestamps appropriés.
+       faire l'animation en boucle, j'ai précisé que la premier animation doit être lancé à la seconde 0 et que l'animation
+       x doit être éxécuter lorsque l'animation x-1 termine
+
+       J'ai utilisé l'animation du display pour cacher le text lorsqu'on passe d'une phase à l'autre.
+       (On pouvait faire ceci en ajoutant plus d'animation d'opacité..)
+  -->
+  <text x="0.325" y="0.2" font-size="0.1px" fill="white">
+    <animate attributeName="display" values="inline;none;none;none" dur="20s" repeatCount="indefinite" />
+    <animate id="1" attributeName="opacity" from="0" to="1" dur="1s" begin="0s;8.end" />
+    <animate id="2" attributeName="opacity" from="1" to="1" dur="3s" begin="1.end" />
+    <animate id="3" attributeName="opacity" from="1" to="0" dur="1s" begin="2.end" />
+    <animate id="4" attributeName="opacity" from="0" to="0" dur="5s" begin="3.end" />
+    Inspirez
+  </text>
+
+  <!-- Text Expirez -->
+  <text x="0.325" y="0.2" font-size="0.1px" fill="white">
+    <animate attributeName="display" values="none;none;inline;none" dur="20s" repeatCount="indefinite" />
+    <animate id="5" attributeName="opacity" from="0" to="1" dur="1s" begin="4.end" />
+    <animate id="6" attributeName="opacity" from="1" to="1" dur="3s" begin="5.end" />
+    <animate id="7" attributeName="opacity" from="1" to="0" dur="1s" begin="6.end" />
+    <animate id="8" attributeName="opacity" from="0" to="0" dur="5s" begin="7.end" />
+      Expirez
+  </text>
+
+</svg>
+
+
+<!-- Code testé dans chrome et edge -->
